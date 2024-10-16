@@ -3,10 +3,14 @@ import itertools
 import multiprocessing
 import time
 import numpy as np
+import logging
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score
+
+# Configurar el logger
+logging.basicConfig(filename='svm_log.log', level=logging.INFO, format='%(message)s')
 
 # Método para nivelación de cargas
 def nivelacion_cargas(D, n_p):
@@ -25,10 +29,10 @@ def nivelacion_cargas(D, n_p):
     return out
 
 # Cargar el dataset de vinos
-data = pd.read_csv('WineQT.csv')  # ruta  del dataset
+data = pd.read_csv('WineQT.csv')  
 # Asignar variables de entrada y salida
-X = data.iloc[:, :-1].values  # Todas las columnas excepto la última (características)
-y = data.iloc[:, -1].values   # Última columna (calidad)
+X = data.iloc[:, :-1].values  
+y = data.iloc[:, -1].values   
 # Normalizar las características
 scaler = StandardScaler()
 X = scaler.fit_transform(X)
@@ -54,12 +58,15 @@ def evaluate_svm_set(hyperparameter_set, lock):
         clf.set_params(C=s['C'], kernel=s['kernel'], gamma=s['gamma'], coef0=s['coef0'])
         clf.fit(X_train, y_train)
         y_pred = clf.predict(X_test)
+        accuracy = accuracy_score(y_test, y_pred)
         with lock:
-            print(f"Accuracy con SVM y parámetros {s}: {accuracy_score(y_test, y_pred)}")
+            log_message = f"Accuracy con SVM y parametros {s}: {accuracy}"
+            print(log_message)
+            logging.info(log_message)
 
 if __name__ == '__main__':
     # Número de hilos
-    N_THREADS = 4
+    N_THREADS = 8
     splits = nivelacion_cargas(combinations_svm, N_THREADS)
     lock = multiprocessing.Lock()
     threads = []
@@ -74,3 +81,4 @@ if __name__ == '__main__':
         thread.join()
     finish_time = time.perf_counter()
     print(f"SVM finished in {finish_time - start_time} seconds")
+    logging.info(f"SVM finished in {finish_time - start_time} seconds")
